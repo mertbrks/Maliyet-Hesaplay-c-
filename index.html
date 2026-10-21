@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>İthalat Maliyet Hesabı</title>
+<link rel="apple-touch-icon" href="ikon.png">
+<meta name="apple-mobile-web-app-title" content="Maliyet">
+<meta name="theme-color" content="#1f5f4a">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='9' fill='%231f5f4a'/%3E%3Cpath d='M20 8 31 13.5v13L20 32 9 26.5v-13Z M9 13.5 20 19l11-5.5 M20 19v13' fill='none' stroke='%23fff' stroke-width='2.2' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+  :root { --bg:#f6f5f2; --kart:#fff; --yazi:#1d1d1b; --soluk:#6b6a66; --cizgi:#dcdad4; --vurgu:#1f5f4a; --eksi:#b23b2e; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--yazi); font:17px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width:960px; margin:0 auto; padding:20px 16px 48px; display:grid; gap:20px; }
+  header { display:flex; align-items:center; gap:12px; }
+  header svg { flex:none; }
+  h1 { font-size:24px; margin:0; line-height:1.2; }
+  header p { margin:2px 0 0; color:var(--soluk); font-size:15px; }
+  h2 { font-size:16px; margin:0 0 12px; color:var(--soluk); font-weight:600; text-transform:uppercase; letter-spacing:.04em; }
+  section { background:var(--kart); border:1px solid var(--cizgi); border-radius:12px; padding:16px; }
+  .alanlar { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:12px; }
+  label { display:grid; gap:4px; font-size:15px; }
+  /* 16px altı iPhone'da odaklanınca sayfayı yakınlaştırır */
+  input { font:inherit; font-size:17px; padding:10px 12px; border:1px solid var(--cizgi); border-radius:8px; width:100%; background:#fff; color:inherit; }
+  input:focus { outline:2px solid var(--vurgu); outline-offset:1px; }
+  .not { font-size:14px; color:var(--soluk); margin:10px 0 0; }
+  a { color:var(--vurgu); }
+  .sonuc { display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px; }
+  .sonuc div { border-left:4px solid var(--vurgu); padding:4px 12px; }
+  .sonuc span { display:block; font-size:14px; color:var(--soluk); }
+  .sonuc strong { font-size:26px; }
+  .eksi { color:var(--eksi); }
+  table { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; }
+  th, td { padding:8px 6px; text-align:right; border-bottom:1px solid var(--cizgi); }
+  th:first-child, td:first-child { text-align:left; white-space:nowrap; }
+  tr.bugun td { font-weight:700; }
+  .detay { font-size:15px; color:var(--soluk); margin-top:12px; }
+  /* Telefonda sonuç en altta kalıyor; kısa özet ekranın altında sabit dursun */
+  #ozet { position:sticky; bottom:0; margin:0 -16px -48px; padding:10px 16px calc(10px + env(safe-area-inset-bottom)); background:var(--vurgu); color:#fff; display:flex; justify-content:space-between; gap:8px; font-variant-numeric:tabular-nums; }
+  #ozet span { display:block; font-size:13px; opacity:.85; }
+  #ozet strong { font-size:18px; }
+  @media (min-width:800px) { main { grid-template-columns:1fr 1fr; } .tam { grid-column:1 / -1; } #ozet { display:none; } }
+</style>
+</head>
+<body>
+<main>
+  <header class="tam">
+    <svg viewBox="0 0 40 40" width="44" height="44" aria-hidden="true"><rect width="40" height="40" rx="9" fill="#1f5f4a"/><path d="M20 8 31 13.5v13L20 32 9 26.5v-13Z M9 13.5 20 19l11-5.5 M20 19v13" fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/></svg>
+    <div><h1>İthalat Maliyet Hesabı</h1><p>Depoya giriş maliyeti, kâr ve kur etkisi</p></div>
+  </header>
+
+  <section>
+    <h2>Ürün ve fatura</h2>
+    <div class="alanlar">
+      <label>Ürün adı <input id="urun" type="text" value="Oyun matı"></label>
+      <label>Adet <input id="adet" inputmode="decimal" value="1000"></label>
+      <label>Fatura fiyatı ($/adet, FOB) <input id="fob" inputmode="decimal" value="5"></label>
+      <label>Navlun ($ toplam) <input id="navlun" inputmode="decimal" value="800"></label>
+      <label>Sigorta ($ toplam) <input id="sigorta" inputmode="decimal" value="50"></label>
+    </div>
+  </section>
+
+  <section>
+    <h2>Vergiler</h2>
+    <div class="alanlar">
+      <label>Gümrük vergisi (%) <input id="gvOran" inputmode="decimal" value="10"></label>
+      <label>İlave gümrük vergisi (%) <input id="igvOran" inputmode="decimal" value="20"></label>
+      <label>Damping ($/adet) <input id="damping" inputmode="decimal" value="0"></label>
+    </div>
+    <p class="not">Oranlar ürüne göre değişir; gümrük müşavirinden teyit edin. KDV maliyete katılmadı (indirilebildiği için).</p>
+  </section>
+
+  <section>
+    <h2>Yurt içi masraflar (TL toplam)</h2>
+    <div class="alanlar">
+      <label>Gümrük müşaviri <input id="musavir" inputmode="decimal" value="8000"></label>
+      <label>Liman / ardiye <input id="liman" inputmode="decimal" value="5000"></label>
+      <label>İç nakliye <input id="nakliye" inputmode="decimal" value="6000"></label>
+      <label>Diğer <input id="diger" inputmode="decimal" value="1000"></label>
+    </div>
+  </section>
+
+  <section>
+    <h2>Kur ve satış</h2>
+    <div class="alanlar">
+      <label>Dolar kuru (TL) <input id="kur" inputmode="decimal" value="40"></label>
+      <label>Satış fiyatı (TL/adet, KDV hariç) <input id="satis" inputmode="decimal" value="450"></label>
+    </div>
+    <p class="not">Güncel kur: <a href="https://www.tcmb.gov.tr/kurlar/today.xml" target="_blank" rel="noopener">TCMB günlük kurlar</a></p>
+  </section>
+
+  <section class="tam" aria-live="polite">
+    <h2 id="baslik">Sonuç</h2>
+    <div class="sonuc">
+      <div><span>Adet başı maliyet</span><strong id="oTl"></strong> <span id="oDolar"></span></div>
+      <div><span>Adet başı kâr</span><strong id="oKar"></strong></div>
+      <div><span>Kâr marjı</span><strong id="oMarj"></strong></div>
+    </div>
+    <p class="detay" id="detay"></p>
+  </section>
+
+  <section class="tam">
+    <h2>Kur değişirse</h2>
+    <table>
+      <thead><tr><th>Kur</th><th>Maliyet / adet</th><th>Kâr / adet</th><th>Marj</th></tr></thead>
+      <tbody id="senaryo"></tbody>
+    </table>
+  </section>
+
+  <div id="ozet" aria-hidden="true">
+    <div><span>Maliyet/adet</span><strong id="zTl"></strong></div>
+    <div><span>Kâr/adet</span><strong id="zKar"></strong></div>
+    <div><span>Marj</span><strong id="zMarj"></strong></div>
+  </div>
+</main>
+<!-- Hesap tek dosyada dursun diye burada; test.js bu bloğu okuyup test eder. -->
+<script id="hesap">
+// Saf hesap: girdiler $ (FOB, navlun, sigorta, damping) ve TL (yurt içi masraf, satış) karışık.
+// KDV maliyete katılmaz: firma ithalatta ödediği KDV'yi indirebiliyor.
+function hesapla(g) {
+  const cif = g.fob * g.adet + g.navlun + g.sigorta;
+  const gv = cif * g.gvOran / 100;
+  const igv = cif * g.igvOran / 100;
+  const damping = g.damping * g.adet;
+  const dolarToplam = cif + gv + igv + damping;
+
+  const birim = (kur) => {
+    const tl = (dolarToplam * kur + g.yurtici) / g.adet;
+    const kar = g.satis - tl;
+    return { kur, tl, dolar: tl / kur, kar, marj: g.satis ? kar / g.satis * 100 : 0 };
+  };
+
+  return {
+    cif, gv, igv, damping, dolarToplam,
+    toplamTL: dolarToplam * g.kur + g.yurtici,
+    ...birim(g.kur),
+    senaryolar: [-10, 0, 10, 20].map((p) => ({ fark: p, ...birim(g.kur * (1 + p / 100)) })),
+  };
+}
+</script>
+<script>
+  const tl = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 2 });
+  const usd = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
+  const yuzde = (x) => '%' + x.toLocaleString('tr-TR', { maximumFractionDigits: 1 });
+  // Virgülle yazılan ondalığı kabul et (5,25 → 5.25); boş/bozuk giriş 0 sayılır.
+  const sayi = (id) => parseFloat(document.getElementById(id).value.replace(',', '.')) || 0;
+  const $ = (id) => document.getElementById(id);
+
+  function guncelle() {
+    const g = {
+      adet: sayi('adet'), fob: sayi('fob'), navlun: sayi('navlun'), sigorta: sayi('sigorta'),
+      gvOran: sayi('gvOran'), igvOran: sayi('igvOran'), damping: sayi('damping'),
+      yurtici: sayi('musavir') + sayi('liman') + sayi('nakliye') + sayi('diger'),
+      kur: sayi('kur'), satis: sayi('satis'),
+    };
+    $('baslik').textContent = 'Sonuç — ' + ($('urun').value || 'ürün');
+    if (g.adet <= 0 || g.kur <= 0) {
+      $('oTl').textContent = '—'; $('oDolar').textContent = ''; $('oKar').textContent = '—'; $('oMarj').textContent = '—';
+      $('zTl').textContent = '—'; $('zKar').textContent = '—'; $('zMarj').textContent = '—';
+      $('oKar').classList.remove('eksi'); $('oMarj').classList.remove('eksi');
+      $('detay').textContent = 'Adet ve kur 0\'dan büyük olmalı.'; $('senaryo').innerHTML = '';
+      return;
+    }
+    const r = hesapla(g);
+    $('oTl').textContent = tl.format(r.tl);
+    $('oDolar').textContent = '(' + usd.format(r.dolar) + ')';
+    $('oKar').textContent = tl.format(r.kar);
+    $('oKar').classList.toggle('eksi', r.kar < 0);
+    $('oMarj').textContent = yuzde(r.marj);
+    $('oMarj').classList.toggle('eksi', r.kar < 0);
+    $('zTl').textContent = tl.format(r.tl);
+    $('zKar').textContent = tl.format(r.kar);
+    $('zMarj').textContent = yuzde(r.marj);
+    $('detay').textContent = `CIF ${usd.format(r.cif)} · Gümrük vergisi ${usd.format(r.gv)} · İGV ${usd.format(r.igv)} · Damping ${usd.format(r.damping)} · Depoya giriş toplamı ${tl.format(r.toplamTL)}`;
+    $('senaryo').innerHTML = r.senaryolar.map((s) => `
+      <tr class="${s.fark === 0 ? 'bugun' : ''}">
+        <td>${s.kur.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} ${s.fark === 0 ? '(bugün)' : (s.fark > 0 ? '+' : '') + s.fark + '%'}</td>
+        <td>${tl.format(s.tl)}</td>
+        <td class="${s.kar < 0 ? 'eksi' : ''}">${tl.format(s.kar)}</td>
+        <td class="${s.kar < 0 ? 'eksi' : ''}">${yuzde(s.marj)}</td>
+      </tr>`).join('');
+  }
+
+  document.querySelectorAll('input').forEach((i) => i.addEventListener('input', guncelle));
+  guncelle();
+</script>
+</body>
+</html>
